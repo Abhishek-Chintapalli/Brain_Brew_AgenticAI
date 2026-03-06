@@ -251,10 +251,14 @@ Pick **Professor** or **Student** (animated SVGs + floating title).
 ## Project Structure
 ```
 .
-├─ main.py          # Streamlit app + agents
-├─ config.py        # configuration
-├─ requirements.txt # dependencies
-├─ quiz_store.json  # runtime data (created)
+├─ main.py            # Streamlit app (Routing & Layouts)
+├─ config.py          # default configs & variables
+├─ requirements.txt   # python dependencies
+├─ core/              # core backend agent modules (llm, document, analyzer, grader, storage)
+├─ ui/                # UI rendering agents & components
+├─ views/             # Streamlit pages (professor and student)
+├─ utils/             # standalone utility functions
+├─ quiz_store.json    # runtime data (created)
 └─ README.md
 ```
 
