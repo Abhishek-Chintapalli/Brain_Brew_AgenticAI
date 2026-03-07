@@ -11,6 +11,6 @@ openai==1.43.0
 
 # RAG (optional but supported)
 sentence-transformers>=3.0.0
-faiss-cpu==1.7.4
+faiss-cpu
 pypdf>=4.0.0
 numpy>=1.26.0
