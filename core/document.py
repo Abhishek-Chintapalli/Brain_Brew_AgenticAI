@@ -7,13 +7,12 @@ from typing import List, Dict
 
 try:
     import numpy as np  # noqa: F401
-    import faiss  # type: ignore
     from sentence_transformers import SentenceTransformer
     from pypdf import PdfReader
     HAVE_RAG = True
 except Exception:
     HAVE_RAG = False
-    st.warning("Some RAG packages are missing. Run: pip install pypdf sentence-transformers faiss-cpu")
+    st.warning("Some RAG packages are missing. Run: pip install pypdf sentence-transformers")
 
 def read_pdf(file_bytes: bytes) -> str:
     reader = PdfReader(io.BytesIO(file_bytes))
@@ -43,8 +42,8 @@ class VectorStore:
     def __init__(self, model_name: str = cfg.RAG_EMBED_MODEL):
         self.model_name = model_name
         self.embedder = None
-        self.index = None
         self.chunks: List[str] = []
+        self.embeddings = None
 
     def _ensure(self):
         if self.embedder is None:
@@ -53,17 +52,24 @@ class VectorStore:
     def build(self, chunks: List[str]):
         self._ensure()
         self.chunks = chunks
-        embs = self.embedder.encode(chunks, convert_to_numpy=True, normalize_embeddings=True)
-        d = embs.shape[1]
-        import faiss as _faiss
-        self.index = _faiss.IndexFlatIP(d)
-        self.index.add(embs.astype("float32"))
+        self.embeddings = self.embedder.encode(chunks, convert_to_tensor=True, normalize_embeddings=True)
 
     def search(self, query: str, k: int = 8) -> List[str]:
+        if self.embeddings is None or len(self.chunks) == 0:
+            return []
+            
         self._ensure()
-        q = self.embedder.encode([query], convert_to_numpy=True, normalize_embeddings=True)
-        D, I = self.index.search(q, k)
-        return [self.chunks[i] for i in I[0] if i >= 0]
+        q_emb = self.embedder.encode(query, convert_to_tensor=True, normalize_embeddings=True)
+        
+        import torch
+        # Cosine similarity (dot product of normalized vectors)
+        cos_scores = torch.mm(q_emb.unsqueeze(0), self.embeddings.transpose(0, 1))[0]
+        
+        # Get top k indices
+        top_k = min(k, len(self.chunks))
+        top_results = torch.topk(cos_scores, k=top_k)
+        
+        return [self.chunks[idx] for idx in top_results.indices.tolist()]
 
 class DocumentProcessor:
     def __init__(self): 
